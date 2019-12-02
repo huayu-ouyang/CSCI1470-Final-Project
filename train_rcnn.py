@@ -16,28 +16,40 @@ from keras_frcnn import losses as losses
 import keras_frcnn.roi_helpers as roi_helpers
 from keras.utils import generic_utils
 from keras_frcnn.simple_parser import get_data
+from keras_frcnn import resnet as nn
 
+# using this as a starting point: https://github.com/kbardool/keras-frcnn/blob/master/train_frcnn.py
+# python train_frcnn.py -o simple -p annotate.txt
+# simple parser
 C = config.Config()
+C.network = 'resnet50'
 C.base_net_weights = nn.get_weight_path()
-train_imgs = []
-train = get_data('/content/stage_2_train_labels.csv')
-for _,row in train.iterrows():
-    img = []
-    img.append(row.patientId + '.dcm')
-    img.append(row.x)
-    img.append(row.y)
-    img.append(row.x + row.width)
-    img.append(row.y + row.height)
-    train_imgs.append(img)
+C.model_path = './model_rcnn.hdf5'
+
+all_imgs, classes_count, class_mapping = get_data('annotate.txt')
+
+if 'bg' not in classes_count:
+	classes_count['bg'] = 0
+	class_mapping['bg'] = len(class_mapping)
+
+C.class_mapping = class_mapping
+
+inv_map = {v: k for k, v in class_mapping.items()}
 
 random.shuffle(all_imgs)
 
 num_imgs = len(all_imgs)
 
-# TODO: wtf is this
-data_gen_train = data_generators.get_anchor_gt(train_imgs, classes_count, C, nn.get_img_output_length, K.image_dim_ordering(), mode='train')
+train_imgs = [s for s in all_imgs if s['imageset'] == 'trainval']
+val_imgs = [s for s in all_imgs if s['imageset'] == 'test']
 
-input_shape_img = (3, None, None)
+data_gen_train = data_generators.get_anchor_gt(train_imgs, classes_count, C, nn.get_img_output_length, K.image_dim_ordering(), mode='train')
+data_gen_val = data_generators.get_anchor_gt(val_imgs, classes_count, C, nn.get_img_output_length,K.image_dim_ordering(), mode='val')
+
+if K.image_dim_ordering() == 'th':
+	input_shape_img = (3, None, None)
+else:
+	input_shape_img = (None, None, 3)
 
 img_input = Input(shape=input_shape_img)
 roi_input = Input(shape=(None, 4))
