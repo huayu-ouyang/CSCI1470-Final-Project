@@ -1,8 +1,10 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 import tensorflow as tf
 import keras
+import math
 from keras.models import Sequential
 from keras.layers import Conv2D, MaxPooling2D, Dropout, Flatten, Dense
+from keras.callbacks import History
 
 
 import gzip
@@ -14,6 +16,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import csv
 
+NUM_IMAGES = 1024
+TEST_SIZE = 0.3
+
 train_img_p = 'rsna-pneumonia-detection-challenge/stage_2_train_images/'
 test_imgp = 'rsna-pneumonia-detection-challenge/stage_2_test_images/'
 train_csv = 'rsna-pneumonia-detection-challenge/stage_2_train_labels.csv'
@@ -22,39 +27,53 @@ train_files = []
 train_labels = []
 train_images = []
 
+test_files = []
+test_labels = []
+test_images = []
+
 with open(train_csv, 'r', newline='') as f:
     reader = csv.reader(f)
-
     next(reader)
     ct = 0
     for row in reader:
-        if ct == 500:
-            break
         fn = train_img_p + row[0] + '.dcm'
         dcm_data = pydicom.read_file(fn)
         label = int(row[5])
-        train_images.append(dcm_data.pixel_array.flatten())
-        train_files.append(fn)
-        train_labels.append(label)
+        if ct == NUM_IMAGES:
+            break
+        elif ct < (NUM_IMAGES / 2):
+            train_images.append(dcm_data.pixel_array.flatten())
+            train_files.append(fn)
+            train_labels.append(label)
+        else:
+            test_images.append(dcm_data.pixel_array.flatten())
+            test_files.append(fn)
+            test_labels.append(label)
         ct += 1
 
 train_files = np.array(train_files)
 train_labels = np.array(train_labels)
 train_images = np.array(train_images)
 
+test_files = np.array(test_files)
+test_labels = np.array(test_labels)
+test_images = np.array(test_images)
 
 train_images = np.transpose(\
 		np.reshape(train_images,(-1,1,1024,1024)),[0,2,3,1])
-print(train_images.shape)
 
+test_images = np.transpose(\
+        np.reshape(test_images,(-1,1,1024,1024)),[0,2,3,1])
+
+print("Test and train transposed")
 # Has 1 ouptut channel
 
 BATCH_SIZE = 32 # 64
-EPOCHS = 5 # 10
+EPOCHS = 5
 IMG_HEIGHT = 1024
 IMG_WIDTH = 1024
-TRAIN_SIZE = 500
-TEST_SIZE = 500
+TRAIN_SIZE = math.floor(NUM_IMAGES * (1 - TEST_SIZE))
+TEST_SIZE = math.ceil(NUM_IMAGES * TEST_SIZE)
 
 
 # Generators for images
@@ -67,12 +86,17 @@ test_image_generator = tf.keras.preprocessing.image.ImageDataGenerator(
     rescale=1./255,
     rotation_range=60,
     horizontal_flip=True)
+
 # train_image_generator.fit(train_images)
 f=train_image_generator.flow(
     train_images,
     train_labels,
-    batch_size=32,
+    batch_size=BATCH_SIZE,
     shuffle=True)
+t=train_image_generator.flow(
+    test_images,
+    test_labels,
+    batch_size=BATCH_SIZE)
 
 """
 # View images
@@ -91,12 +115,32 @@ model = Sequential([
     MaxPooling2D(),
     Conv2D(20, 3, padding='same', activation='relu'),
     MaxPooling2D(),
-    # Conv2D(20, 3, padding='same', activation='relu'),
-    # MaxPooling2D(),
+    Conv2D(20, 3, padding='same', activation='relu'),
+    MaxPooling2D(),
     Flatten(),
     # Dense(512, activation='relu'),
-    Dense(1, activation='sigmoid')
+    Dense(1, activation='softmax')
 ])
 
 model.compile(optimizer=keras.optimizers.Adam(learning_rate=0.001), loss="binary_crossentropy",metrics=['accuracy'])
-model.fit_generator(f, steps_per_epoch=((TRAIN_SIZE // BATCH_SIZE) + 1), epochs=EPOCHS)
+
+# H = History()
+H = model.fit_generator(
+    f,
+    steps_per_epoch=((TRAIN_SIZE // BATCH_SIZE) + 1),
+    epochs=EPOCHS,
+    validation_data=t,
+    validation_steps=((TEST_SIZE // BATCH_SIZE) + 1))
+    # callbacks=[H])
+
+plt.style.use("ggplot")
+plt.figure()
+plt.plot(np.arange(0, EPOCHS), H.history["loss"], label="train loss")
+plt.plot(np.arange(0, EPOCHS), H.history["val_loss"], label="test loss")
+plt.plot(np.arange(0, EPOCHS), H.history['accuracy'], label="train accuracy")
+plt.plot(np.arange(0, EPOCHS), H.history['val_accuracy'], label="test accuracy")
+plt.xlabel("Epoch #")
+plt.ylabel("Loss/Accuracy")
+plt.legend(loc="lower left")
+plt.savefig("summary.png")
+
