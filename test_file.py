@@ -122,7 +122,7 @@ model.add(Dropout(0.3))
 
 model.add(Flatten())
 model.add(Dense(512, activation='relu'))
-mdoel.add(Dense(2, activation='softmax'))
+model.add(Dense(2, activation='softmax'))
 
 model.compile(optimizer=keras.optimizers.Adam(learning_rate=0.001), loss="binary_crossentropy",metrics=['accuracy'])
 
