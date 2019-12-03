@@ -18,7 +18,7 @@ import csv
 
 NUM_IMAGES = 1024
 TEST_SIZE = 0.3
-
+# .........
 train_img_p = 'rsna-pneumonia-detection-challenge/stage_2_train_images/'
 test_imgp = 'rsna-pneumonia-detection-challenge/stage_2_test_images/'
 train_csv = 'rsna-pneumonia-detection-challenge/stage_2_train_labels.csv'
@@ -69,7 +69,7 @@ print("Test and train transposed")
 # Has 1 ouptut channel
 
 BATCH_SIZE = 32 # 64
-EPOCHS = 5
+EPOCHS = 10
 IMG_HEIGHT = 1024
 IMG_WIDTH = 1024
 TRAIN_SIZE = math.floor(NUM_IMAGES * (1 - TEST_SIZE))
@@ -122,17 +122,17 @@ model.add(Dropout(0.3))
 
 model.add(Flatten())
 model.add(Dense(512, activation='relu'))
-model.add(Dense(2, activation='softmax'))
+model.add(Dense(1, activation='softmax'))
 
 model.compile(optimizer=keras.optimizers.Adam(learning_rate=0.001), loss="binary_crossentropy",metrics=['accuracy'])
 
 # H = History()
 H = model.fit_generator(
     f,
-    steps_per_epoch=((TRAIN_SIZE // BATCH_SIZE) + 1),
+    steps_per_epoch=(TRAIN_SIZE // BATCH_SIZE)+1,
     epochs=EPOCHS,
     validation_data=t,
-    validation_steps=((TEST_SIZE // BATCH_SIZE) + 1))
+    validation_steps=(TEST_SIZE // BATCH_SIZE)+1)
     # callbacks=[H])
 
 plt.style.use("ggplot")
