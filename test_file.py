@@ -110,17 +110,19 @@ for train_b, labels_b in f:
 exit(0)
 """
 
-model = Sequential([
-    Conv2D(16, 3, padding='same', activation='relu', input_shape=(IMG_HEIGHT, IMG_WIDTH ,1)),
-    MaxPooling2D(),
-    Conv2D(20, 3, padding='same', activation='relu'),
-    MaxPooling2D(),
-    Conv2D(20, 3, padding='same', activation='relu'),
-    MaxPooling2D(),
-    Flatten(),
-    # Dense(512, activation='relu'),
-    Dense(1, activation='softmax')
-])
+model = Sequential()
+model.add(Conv2D(16, 3, padding='same', activation='relu', input_shape=(IMG_HEIGHT, IMG_WIDTH ,1)))
+    # MaxPooling2D(),
+model.add(Conv2D(20, 3, padding='same', activation='relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+
+model.add(Conv2D(20, 3, padding='same', activation='relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+model.add(Dropout(0.3))
+
+model.add(Flatten())
+model.add(Dense(512, activation='relu'))
+mdoel.add(Dense(2, activation='softmax'))
 
 model.compile(optimizer=keras.optimizers.Adam(learning_rate=0.001), loss="binary_crossentropy",metrics=['accuracy'])
 
