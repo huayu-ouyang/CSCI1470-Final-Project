@@ -1,22 +1,16 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
 import tensorflow as tf
 import keras
 import math
 from keras.models import Sequential
 from keras.layers import Conv2D, MaxPooling2D, Dropout, Flatten, Dense
 from keras.callbacks import History
-
-
-import gzip
 import numpy as np
 import json
 import pydicom
-import glob
-import pandas as pd
 import matplotlib.pyplot as plt
 import csv
 
-NUM_IMAGES = 1024
+NUM_IMAGES = 128
 TEST_SIZE = 0.3
 # .........
 train_img_p = 'rsna-pneumonia-detection-challenge/stage_2_train_images/'
