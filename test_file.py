@@ -10,7 +10,7 @@ import pydicom
 import matplotlib.pyplot as plt
 import csv
 
-NUM_IMAGES = 128
+NUM_IMAGES = 64
 TEST_SIZE = 0.3
 # .........
 train_img_p = 'rsna-pneumonia-detection-challenge/stage_2_train_images/'
@@ -81,7 +81,6 @@ test_image_generator = tf.keras.preprocessing.image.ImageDataGenerator(
     rotation_range=60,
     horizontal_flip=True)
 
-# train_image_generator.fit(train_images)
 f=train_image_generator.flow(
     train_images,
     train_labels,
@@ -91,6 +90,7 @@ t=train_image_generator.flow(
     test_images,
     test_labels,
     batch_size=BATCH_SIZE)
+print("Generators created.")
 
 """
 # View images
@@ -106,20 +106,17 @@ exit(0)
 
 model = Sequential()
 model.add(Conv2D(16, 3, padding='same', activation='relu', input_shape=(IMG_HEIGHT, IMG_WIDTH ,1)))
-    # MaxPooling2D(),
 model.add(Conv2D(20, 3, padding='same', activation='relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
-
 model.add(Conv2D(20, 3, padding='same', activation='relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 model.add(Dropout(0.3))
-
 model.add(Flatten())
-model.add(Dense(512, activation='relu'))
+# model.add(Dense(512, activation='relu'))
 model.add(Dense(1, activation='softmax'))
 
 model.compile(optimizer=keras.optimizers.Adam(learning_rate=0.001), loss="binary_crossentropy",metrics=['accuracy'])
-
+print("model created.")
 # H = History()
 H = model.fit_generator(
     f,
@@ -128,7 +125,7 @@ H = model.fit_generator(
     validation_data=t,
     validation_steps=(TEST_SIZE // BATCH_SIZE)+1)
     # callbacks=[H])
-
+print("model fitted.")
 plt.style.use("ggplot")
 plt.figure()
 plt.plot(np.arange(0, EPOCHS), H.history["loss"], label="train loss")
