@@ -63,7 +63,7 @@ print("Test and train transposed")
 # Has 1 ouptut channel
 
 BATCH_SIZE = 32 # 64
-EPOCHS = 1 # 10
+EPOCHS = 10
 IMG_HEIGHT = 1024
 IMG_WIDTH = 1024
 TRAIN_SIZE = math.floor(NUM_IMAGES * (1 - TEST_SIZE))
