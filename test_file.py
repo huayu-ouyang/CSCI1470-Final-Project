@@ -10,7 +10,7 @@ import pydicom
 import matplotlib.pyplot as plt
 import csv
 
-NUM_IMAGES = 64
+NUM_IMAGES = 1024
 TEST_SIZE = 0.3
 # .........
 train_img_p = 'rsna-pneumonia-detection-challenge/stage_2_train_images/'
