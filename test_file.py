@@ -4,14 +4,23 @@ import math
 from keras.models import Sequential
 from keras.layers import Conv2D, MaxPooling2D, Dropout, Flatten, Dense
 from keras.callbacks import History
+from skimage.transform import resize
 import numpy as np
 import json
 import pydicom
 import matplotlib.pyplot as plt
 import csv
 
-NUM_IMAGES = 1024
+NUM_IMAGES = 32
 TEST_SIZE = 0.3
+
+BATCH_SIZE = 32 # 64
+EPOCHS = 10
+IMG_DIM = 500
+
+TRAIN_SIZE = math.floor(NUM_IMAGES * (1 - TEST_SIZE))
+TEST_SIZE = math.ceil(NUM_IMAGES * TEST_SIZE)
+
 # .........
 train_img_p = 'rsna-pneumonia-detection-challenge/stage_2_train_images/'
 test_imgp = 'rsna-pneumonia-detection-challenge/stage_2_test_images/'
@@ -36,11 +45,31 @@ with open(train_csv, 'r', newline='') as f:
         if ct == NUM_IMAGES:
             break
         elif ct < (NUM_IMAGES / 2):
-            train_images.append(dcm_data.pixel_array.flatten())
+            image_arr = dcm_data.pixel_array
+            resized_arr = resize(image_arr, (IMG_DIM,IMG_DIM))
+
+            """
+            plt.imshow(resized_arr)
+            plt.show()
+            plt.clf()
+
+            """
+
+            train_images.append(resized_arr.flatten())
             train_files.append(fn)
             train_labels.append(label)
         else:
-            test_images.append(dcm_data.pixel_array.flatten())
+            image_arr = dcm_data.pixel_array
+            resized_arr = resize(image_arr, (IMG_DIM,IMG_DIM))
+
+            """
+            plt.imshow(resized_arr)
+            plt.show()
+            plt.clf()
+
+            """
+
+            test_images.append(resized_arr.flatten())
             test_files.append(fn)
             test_labels.append(label)
         ct += 1
@@ -54,20 +83,15 @@ test_labels = np.array(test_labels)
 test_images = np.array(test_images)
 
 train_images = np.transpose(\
-		np.reshape(train_images,(-1,1,1024,1024)),[0,2,3,1])
+		np.reshape(train_images,(-1,1,IMG_DIM,IMG_DIM)),[0,2,3,1])
 
 test_images = np.transpose(\
-        np.reshape(test_images,(-1,1,1024,1024)),[0,2,3,1])
+        np.reshape(test_images,(-1,1,IMG_DIM,IMG_DIM)),[0,2,3,1])
 
 print("Test and train transposed")
 # Has 1 ouptut channel
 
-BATCH_SIZE = 32 # 64
-EPOCHS = 10
-IMG_HEIGHT = 1024
-IMG_WIDTH = 1024
-TRAIN_SIZE = math.floor(NUM_IMAGES * (1 - TEST_SIZE))
-TEST_SIZE = math.ceil(NUM_IMAGES * TEST_SIZE)
+
 
 # Generators for images
 train_image_generator = tf.keras.preprocessing.image.ImageDataGenerator(
@@ -104,10 +128,10 @@ exit(0)
 """
 
 model = Sequential()
-model.add(Conv2D(8, 3, padding='same', activation='relu', input_shape=(IMG_HEIGHT, IMG_WIDTH ,1)))
-model.add(Conv2D(4, 3, padding='same', activation='relu'))
+model.add(Conv2D(3, 3, padding='same', activation='relu', input_shape=(IMG_DIM, IMG_DIM ,1)))
+model.add(Conv2D(20, 3, padding='same', activation='relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Conv2D(4, 3, padding='same', activation='relu'))
+model.add(Conv2D(20, 3, padding='same', activation='relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 model.add(Dropout(0.3))
 model.add(Flatten())
