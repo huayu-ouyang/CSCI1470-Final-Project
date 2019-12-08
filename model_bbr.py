@@ -1,10 +1,11 @@
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Flatten, Conv2D, BatchNormalization, LeakyReLU, Reshape, Conv2DTranspose, MaxPooling2D
+from PIL import Image, ImageDraw
 import numpy as np
 import math
 
 batch_size = 32
-epochs = 10
+epochs = 3
 input_dim = 228
 num_images = 50
 test_size = 0.5
@@ -79,8 +80,6 @@ def calculate_iou(target, prediction):
     return iou
 
 def loss_function(y_true, y_pred):
-    print(y_true)
-    print(y_pred)
     mse = tf.losses.mean_squared_error(y_true, y_pred)
     iou = calculate_iou(y_true, y_pred)
     return mse + (1-iou)
@@ -114,13 +113,15 @@ predictions = model.predict(test_X)
 prediction_boxes = predictions[...,0:4] * input_dim
 prediction_classes = predictions[...,0:4]
 iou_scores = calculate_iou(prediction_boxes, prediction_classes)
-print("iou score: " + iou_scores.mean())
-print("accuracy: " + accuracy(test_Y[...,4:], pred_classes) * 100)
+print("iou score: " + str(iou_scores.numpy().mean()))
+print("accuracy: " + str(accuracy(test_Y[...,4:], prediction_classes) * 100))
 
 for i in range(predictions.shape[0]):
-    b = boxes[i, 0:4] * input_dim
+    b = predictions[i, 0:4] * input_dim
+    print(b)
     img = test_X[i] * 255
-    source_img = Image.fromarray(img.astype(np.uint8))
+    img = img.reshape(-1, img.shape[1])
+    source_img = Image.fromarray(img.astype(np.uint8), 'L')
     draw = ImageDraw.Draw(source_img)
-    draw.rectangle(b,outline="red")
+    draw.rectangle(b, outline="red")
     source_img.save('inference_images/image_{}.png'.format(i+1), 'png')
