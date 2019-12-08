@@ -32,15 +32,16 @@ for _, row in train.iterrows():
     cv2.imwrite(image, pixel_array_np)
     img_path = "train_imgs/" + row.patientId + ".jpg"
     image = Image.open(img_path).resize((image_dim, image_dim))
+    resize_ratio = 228/1024
     bounding_box = [0.0]*4
     x_min = row.x
-    bounding_box[0] = x_min/image_dim
+    bounding_box[0] = (x_min/image_dim)*resize_ratio
     y_min = row.y
-    bounding_box[1] = y_min/image_dim
+    bounding_box[1] = (y_min/image_dim)*resize_ratio
     x_max = row.x+width
-    bounding_box[2] = x_max/image_dim
+    bounding_box[2] = (x_max/image_dim)*resize_ratio
     y_max = row.y+height
-    bounding_box[3] = y_max/image_dim
+    bounding_box[3] = (y_max/image_dim)*resize_ratio
     classes.append(cell_type)
     bboxes.append(bounding_box)
     images.append(np.asarray(image)/255)

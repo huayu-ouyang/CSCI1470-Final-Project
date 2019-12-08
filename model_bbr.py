@@ -18,7 +18,6 @@ test_X = np.load('test_x.npy')
 test_Y = np.load('test_y.npy')
 
 train_X = np.transpose(np.reshape(train_X,(-1,1,input_dim,input_dim)),[0,2,3,1])
-
 test_X = np.transpose(np.reshape(test_X,(-1,1,input_dim,input_dim)),[0,2,3,1])
 
 model = tf.keras.Sequential()
@@ -84,44 +83,37 @@ def loss_function(y_true, y_pred):
     iou = calculate_iou(y_true, y_pred)
     return mse + (1-iou)
 
-def iou_metric(y_true, y_pred):
-    return calculate_iou(y_true, y_pred)
-
-def accuracy(target, prediction):
-    target = np.argmax(target, axis=1)
-    prediction = np.argmax(prediction, axis=1)
-    return (target == prediction).mean()
+# def accuracy(target, prediction):
+#     target = np.argmax(target, axis=1)
+#     prediction = np.argmax(prediction, axis=1)
+#     return (target == prediction).mean()
 
 model.compile(
     optimizer=tf.keras.optimizers.Adam(lr=0.0001),
     loss=loss_function,
-    metrics=[iou_metric])
+    metrics=[calculate_iou])
 
-train_labels = [item[-1] for item in train_Y]
-train_labels = [int(i) for i in train_labels]
-test_labels = [item[-1] for item in test_Y]
-test_labels = [int(i) for i in test_labels]
-
-model.fit(
-    train_X,
-    train_Y,
+model.fit(train_X, train_Y,
 	batch_size=batch_size,
 	epochs=epochs,
 	validation_data=(test_X, test_Y))
 
+target_boxes = test_Y * input_dim
 predictions = model.predict(test_X)
 prediction_boxes = predictions[...,0:4] * input_dim
-prediction_classes = predictions[...,0:4]
-iou_scores = calculate_iou(prediction_boxes, prediction_classes)
+prediction_classes = predictions[...,4:]
+iou_scores = calculate_iou(target_boxes, prediction_boxes)
+# accuracy = accuracy(test_Y[...,4:], prediction_classes) * 100
 print("iou score: " + str(iou_scores.numpy().mean()))
-print("accuracy: " + str(accuracy(test_Y[...,4:], prediction_classes) * 100))
+# print("accuracy: " + str(accuracy))
 
 for i in range(predictions.shape[0]):
-    b = predictions[i, 0:4] * input_dim
-    print(b)
+    predicted_b = predictions[i, 0:4] * input_dim
     img = test_X[i] * 255
     img = img.reshape(-1, img.shape[1])
     source_img = Image.fromarray(img.astype(np.uint8), 'L')
     draw = ImageDraw.Draw(source_img)
-    draw.rectangle(b, outline="red")
+    draw.rectangle(predicted_b, outline=1)
+    actual_b = test_Y[i][0:4] * input_dim
+    draw.rectangle([(actual_b[0], actual_b[1]),(actual_b[2], actual_b[3])], outline=300)
     source_img.save('inference_images/image_{}.png'.format(i+1), 'png')
