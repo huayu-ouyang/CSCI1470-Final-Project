@@ -2,7 +2,7 @@ import tensorflow as tf
 import keras
 import math
 from keras.models import Sequential
-from keras.layers import Conv2D, MaxPooling2D, Dropout, Flatten, Dense
+from keras.layers import Conv2D, MaxPooling2D, Dropout, Flatten, Dense, BatchNormalization, LeakyReLU
 from keras.callbacks import History
 from skimage.transform import resize
 import numpy as np
@@ -11,7 +11,7 @@ import pydicom
 import matplotlib.pyplot as plt
 import csv
 
-NUM_IMAGES = 32
+NUM_IMAGES = 1024
 TEST_SIZE = 0.3
 
 BATCH_SIZE = 32 # 64
@@ -44,7 +44,7 @@ with open(train_csv, 'r', newline='') as f:
         label = int(row[5])
         if ct == NUM_IMAGES:
             break
-        elif ct < (NUM_IMAGES / 2):
+        elif ct < (TRAIN_SIZE):
             image_arr = dcm_data.pixel_array
             resized_arr = resize(image_arr, (IMG_DIM,IMG_DIM))
 
@@ -58,6 +58,7 @@ with open(train_csv, 'r', newline='') as f:
             train_images.append(resized_arr.flatten())
             train_files.append(fn)
             train_labels.append(label)
+            # print(label)
         else:
             image_arr = dcm_data.pixel_array
             resized_arr = resize(image_arr, (IMG_DIM,IMG_DIM))
@@ -72,6 +73,7 @@ with open(train_csv, 'r', newline='') as f:
             test_images.append(resized_arr.flatten())
             test_files.append(fn)
             test_labels.append(label)
+            # print(label)
         ct += 1
 
 train_files = np.array(train_files)
@@ -128,17 +130,31 @@ exit(0)
 """
 
 model = Sequential()
-model.add(Conv2D(3, 3, padding='same', activation='relu', input_shape=(IMG_DIM, IMG_DIM ,1)))
-model.add(Conv2D(20, 3, padding='same', activation='relu'))
+model.add(Conv2D(3, 3, padding='same', input_shape=(IMG_DIM, IMG_DIM ,1)))
+model.add(BatchNormalization())
+model.add(LeakyReLU())
 model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Conv2D(20, 3, padding='same', activation='relu'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Dropout(0.3))
-model.add(Flatten())
-# model.add(Dense(512, activation='relu'))
-model.add(Dense(1, activation='softmax'))
 
-model.compile(optimizer=keras.optimizers.Adam(learning_rate=0.01), loss="binary_crossentropy",metrics=['accuracy'])
+
+model.add(Conv2D(20, 3, padding='same'))
+model.add(BatchNormalization())
+model.add(LeakyReLU())
+model.add(MaxPooling2D(pool_size=(2, 2)))
+
+model.add(Conv2D(20, 3, padding='same'))
+model.add(BatchNormalization())
+model.add(LeakyReLU())
+# model.add(MaxPooling2D(pool_size=(2, 2)))
+
+model.add(Flatten())
+# model.add(Conv2D(1, 1, padding='same', activation='sigmoid'))
+# model.add(Dropout(0.3))
+# model.add(Flatten())
+# model.add(Dense(512, activation='relu'))
+model.add(Dense(1, activation='sigmoid'))
+print(model.summary())
+
+model.compile(optimizer=keras.optimizers.Adam(learning_rate=0.0001), loss="binary_crossentropy",metrics=['accuracy'])
 print("model created.")
 
 # H = History()
