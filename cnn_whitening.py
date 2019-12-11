@@ -10,12 +10,13 @@ import json
 import pydicom
 import matplotlib.pyplot as plt
 import csv
+import random
 
 NUM_IMAGES = 10000
 TEST_SIZE = 0.3
 
 BATCH_SIZE = 32 # 64
-EPOCHS = 10
+EPOCHS = 5
 IMG_DIM = 128
 
 TRAIN_SIZE = math.floor(NUM_IMAGES * (1 - TEST_SIZE))
@@ -26,13 +27,10 @@ train_img_p = 'rsna-pneumonia-detection-challenge/stage_2_train_images/'
 test_imgp = 'rsna-pneumonia-detection-challenge/stage_2_test_images/'
 train_csv = 'rsna-pneumonia-detection-challenge/stage_2_train_labels.csv'
 
-train_files = []
-train_labels = []
-train_images = []
+all_files = []
+all_labels = []
+all_images = []
 
-test_files = []
-test_labels = []
-test_images = []
 
 with open(train_csv, 'r', newline='') as f:
     reader = csv.reader(f)
@@ -44,59 +42,65 @@ with open(train_csv, 'r', newline='') as f:
         label = int(row[5])
         if ct == NUM_IMAGES:
             break
-        elif ct < (TRAIN_SIZE):
-            image_arr = dcm_data.pixel_array
-            resized_arr = resize(image_arr, (IMG_DIM,IMG_DIM))
-
-            """
-            plt.imshow(resized_arr)
-            plt.show()
-            plt.clf()
-
-            """
-
-            train_images.append(resized_arr.flatten())
-            train_files.append(fn)
-            train_labels.append(label)
-            # print(label)
         else:
             image_arr = dcm_data.pixel_array
             resized_arr = resize(image_arr, (IMG_DIM,IMG_DIM))
 
-            """
-            plt.imshow(resized_arr)
-            plt.show()
-            plt.clf()
+            # if ct == 1:
+            #     plt.imsave("nopneumonia.png", resized_arr)
+            # if ct == 4:
+            #     plt.imsave("pneumonia.png", resized_arr)
 
-            """
+            all_images.append(resized_arr.flatten())
+            all_files.append(fn)
+            all_labels.append(label)
+            # print(label)
+        # else:
+        #     image_arr = dcm_data.pixel_array
+        #     resized_arr = resize(image_arr, (IMG_DIM,IMG_DIM))
 
-            test_images.append(resized_arr.flatten())
-            test_files.append(fn)
-            test_labels.append(label)
+        #     """
+        #     plt.imshow(resized_arr)
+        #     plt.show()
+        #     plt.clf()
+
+        #     """
+
+        #     test_images.append(resized_arr.flatten())
+        #     test_files.append(fn)
+        #     test_labels.append(label)
             # print(label)
         ct += 1
 
-train_files = np.array(train_files)
-train_labels = np.array(train_labels)
-train_images = np.array(train_images)
+all_files = np.array(all_files)
+all_labels = np.array(all_labels)
+all_images = np.array(all_images)
 
-# print(np.shape(train_images))
-# train_images -= np.mean(train_images, axis = 0)
-# train_images /= np.std(train_images, axis=0)
+c = list(zip(all_labels, all_images))
+random.seed(4)
+random.shuffle(c)
 
-test_files = np.array(test_files)
-test_labels = np.array(test_labels)
-test_images = np.array(test_images)
+all_labels, all_images = zip(*c)
+all_labels = np.array(list(all_labels))
+all_images = np.array(list(all_images))
+
+train_labels = all_labels[:TRAIN_SIZE]
+train_images = all_images[:TRAIN_SIZE]
+
+
+
+# test_files = np.array(test_files)
+test_labels = all_labels[TRAIN_SIZE:]
+test_images = all_images[TRAIN_SIZE:]
+print(len(test_images))
 
 train_images = np.transpose(\
-		np.reshape(train_images,(-1,1,IMG_DIM,IMG_DIM)),[0,2,3,1])
+        np.reshape(train_images,(-1,1,IMG_DIM,IMG_DIM)),[0,2,3,1])
 
-# print(np.shape(train_images))
 test_images = np.transpose(\
         np.reshape(test_images,(-1,1,IMG_DIM,IMG_DIM)),[0,2,3,1])
 
 print("Test and train transposed")
-# Has 1 ouptut channel
 
 
 
@@ -195,9 +199,17 @@ plt.style.use("ggplot")
 plt.figure()
 plt.plot(np.arange(0, EPOCHS), H.history["loss"], label="train loss")
 plt.plot(np.arange(0, EPOCHS), H.history["val_loss"], label="test loss")
+plt.xlabel("Epoch #")
+
+plt.ylabel("Loss")
+plt.legend(loc="best")
+plt.savefig("whiteningloss2.png")
+
+plt.figure()
 plt.plot(np.arange(0, EPOCHS), H.history['accuracy'], label="train accuracy")
 plt.plot(np.arange(0, EPOCHS), H.history['val_accuracy'], label="test accuracy")
 plt.xlabel("Epoch #")
-plt.ylabel("Loss/Accuracy")
-plt.legend(loc="lower left")
-plt.savefig("whiteningsummary.png")
+
+plt.ylabel("Accuracy")
+plt.legend(loc="best")
+plt.savefig("whiteningaccuracy2.png")

@@ -11,27 +11,38 @@ import json
 import pydicom
 import matplotlib.pyplot as plt
 import csv
+import random
 
 
 def contrast_stretching(img):
+    (a, b, c) = img.shape
+
+    img = np.reshape(img, [a, b])
     p2, p98 = np.percentile(img, (2, 98))
     img_rescale = exposure.rescale_intensity(img, in_range=(p2, p98))
-    return img_rescale
+    return np.reshape(img_rescale, [a, b, c])
 
 def HE(img):
+    (a, b, c) = img.shape
+
+    img = np.reshape(img, [a, b])
     img_eq = exposure.equalize_hist(img)
-    return img_eq
+    return np.reshape(img_eq, [a, b, c])
 
 def CLAHE(img):
-    img_adapteq = exposure.equalize_adapthist(img, clip_limit=0.03)
-    return img_adapteq
+    (a, b, c) = img.shape
 
-NUM_IMAGES = 1024
+    img = np.reshape(img, [a, b])
+    img_adapteq = exposure.equalize_adapthist(img, clip_limit=0.03)
+
+    return np.reshape(img_adapteq, [a, b, c])
+
+NUM_IMAGES = 10000
 TEST_SIZE = 0.3
 
 BATCH_SIZE = 32 # 64
-EPOCHS = 10
-IMG_DIM = 128
+EPOCHS = 5
+IMG_DIM = 256
 
 TRAIN_SIZE = math.floor(NUM_IMAGES * (1 - TEST_SIZE))
 TEST_SIZE = math.ceil(NUM_IMAGES * TEST_SIZE)
@@ -41,13 +52,10 @@ train_img_p = 'rsna-pneumonia-detection-challenge/stage_2_train_images/'
 test_imgp = 'rsna-pneumonia-detection-challenge/stage_2_test_images/'
 train_csv = 'rsna-pneumonia-detection-challenge/stage_2_train_labels.csv'
 
-train_files = []
-train_labels = []
-train_images = []
+all_files = []
+all_labels = []
+all_images = []
 
-test_files = []
-test_labels = []
-test_images = []
 
 with open(train_csv, 'r', newline='') as f:
     reader = csv.reader(f)
@@ -59,82 +67,89 @@ with open(train_csv, 'r', newline='') as f:
         label = int(row[5])
         if ct == NUM_IMAGES:
             break
-        elif ct < (TRAIN_SIZE):
-            image_arr = dcm_data.pixel_array
-            resized_arr = resize(image_arr, (IMG_DIM,IMG_DIM))
-
-            """
-            plt.imshow(resized_arr)
-            plt.show()
-            plt.clf()
-
-            """
-
-            train_images.append(resized_arr.flatten())
-            train_files.append(fn)
-            train_labels.append(label)
-            # print(label)
         else:
             image_arr = dcm_data.pixel_array
             resized_arr = resize(image_arr, (IMG_DIM,IMG_DIM))
 
-            """
-            plt.imshow(resized_arr)
-            plt.show()
-            plt.clf()
+            # if ct == 1:
+            #     plt.imsave("nopneumonia.png", resized_arr)
+            # if ct == 4:
+            #     plt.imsave("pneumonia.png", resized_arr)
 
-            """
+            all_images.append(resized_arr.flatten())
+            all_files.append(fn)
+            all_labels.append(label)
+            # print(label)
+        # else:
+        #     image_arr = dcm_data.pixel_array
+        #     resized_arr = resize(image_arr, (IMG_DIM,IMG_DIM))
 
-            test_images.append(resized_arr.flatten())
-            test_files.append(fn)
-            test_labels.append(label)
+        #     """
+        #     plt.imshow(resized_arr)
+        #     plt.show()
+        #     plt.clf()
+
+        #     """
+
+        #     test_images.append(resized_arr.flatten())
+        #     test_files.append(fn)
+        #     test_labels.append(label)
             # print(label)
         ct += 1
 
-train_files = np.array(train_files)
-train_labels = np.array(train_labels)
-train_images = np.array(train_images)
+all_files = np.array(all_files)
+all_labels = np.array(all_labels)
+all_images = np.array(all_images)
 
-# print(np.shape(train_images))
-# train_images -= np.mean(train_images, axis = 0)
-# train_images /= np.std(train_images, axis=0)
+c = list(zip(all_labels, all_images))
+random.seed(4)
+random.shuffle(c)
 
-test_files = np.array(test_files)
-test_labels = np.array(test_labels)
-test_images = np.array(test_images)
+all_labels, all_images = zip(*c)
+all_labels = np.array(list(all_labels))
+all_images = np.array(list(all_images))
 
-train_images = np.transpose(\
-		np.reshape(train_images,(-1,1,IMG_DIM,IMG_DIM)),[0,2,3,1])
+train_labels = all_labels[:TRAIN_SIZE]
+train_images = all_images[:TRAIN_SIZE]
 
-# print(np.shape(train_images))
-test_images = np.transpose(\
-        np.reshape(test_images,(-1,1,IMG_DIM,IMG_DIM)),[0,2,3,1])
+
+
+# test_files = np.array(test_files)
+test_labels = all_labels[TRAIN_SIZE:]
+test_images = all_images[TRAIN_SIZE:]
+print(len(test_images))
+
+train_images = np.divide(np.transpose(\
+        np.reshape(train_images,(-1,1,IMG_DIM,IMG_DIM)),[0,2,3,1]), 255.0)
+
+test_images = np.divide(np.transpose(\
+        np.reshape(test_images,(-1,1,IMG_DIM,IMG_DIM)),[0,2,3,1]), 255.0)
 
 print("Test and train transposed")
-# Has 1 ouptut channel
 
-
-
+print(train_images.shape)
+print(test_images.shape)
 # Generators for images
 train_image_generator = tf.keras.preprocessing.image.ImageDataGenerator(
-    rescale=1.0/255,
     rotation_range=60,
     horizontal_flip=True,
     featurewise_center=True,
     featurewise_std_normalization=True,
-    preprocessing_function=CLAHE) # change btwn contrast_stretching, HE, CLAHE
+    preprocessing_function=HE) # change btwn contrast_stretching, HE, CLAHE
 
-test_image_generator = tf.keras.preprocessing.image.ImageDataGenerator(
-    rescale=1./255,
-    preprocessing_function=CLAHE)
+test_image_generator = tf.keras.preprocessing.image.ImageDataGenerator()
 
 train_image_generator.fit(train_images)
+
 
 f=train_image_generator.flow(
     train_images,
     train_labels,
     batch_size=BATCH_SIZE,
     shuffle=True)
+
+for i in range(len(test_images)):
+    test_images[i] = train_image_generator.standardize(test_images[i])
 
 
 t=test_image_generator.flow(
@@ -209,9 +224,19 @@ plt.style.use("ggplot")
 plt.figure()
 plt.plot(np.arange(0, EPOCHS), H.history["loss"], label="train loss")
 plt.plot(np.arange(0, EPOCHS), H.history["val_loss"], label="test loss")
+plt.xlabel("Epoch #")
+
+plt.ylabel("Loss")
+plt.legend(loc="best")
+plt.savefig("HEloss.png")
+
+plt.figure()
 plt.plot(np.arange(0, EPOCHS), H.history['accuracy'], label="train accuracy")
 plt.plot(np.arange(0, EPOCHS), H.history['val_accuracy'], label="test accuracy")
 plt.xlabel("Epoch #")
-plt.ylabel("Loss/Accuracy")
-plt.legend(loc="lower left")
-plt.savefig("summary.png")
+
+plt.ylabel("Accuracy")
+plt.legend(loc="best")
+plt.savefig("HEaccuracy.png")
+
+
