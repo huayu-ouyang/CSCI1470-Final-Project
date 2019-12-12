@@ -11,7 +11,7 @@ import cv2
 train = pd.read_csv('stage_2_train_labels.csv', engine='python')
 train.head()
 
-image_dim = 228
+image_dim = 128
 
 images = []
 bboxes = []
@@ -32,7 +32,7 @@ for _, row in train.iterrows():
     cv2.imwrite(image, pixel_array_np)
     img_path = "train_imgs/" + row.patientId + ".jpg"
     image = Image.open(img_path).resize((image_dim, image_dim))
-    resize_ratio = 228/1024
+    resize_ratio = image_dim/1024
     bounding_box = [0.0]*4
     x_min = row.x
     bounding_box[0] = (x_min/image_dim)*resize_ratio
