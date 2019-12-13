@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 import csv
 import random
 
+#CNN with no image preprocessing. 
+
 NUM_IMAGES = 10000
 TEST_SIZE = 0.3
 
@@ -22,7 +24,6 @@ IMG_DIM = 256
 TRAIN_SIZE = math.floor(NUM_IMAGES * (1 - TEST_SIZE))
 TEST_SIZE = math.ceil(NUM_IMAGES * TEST_SIZE)
 
-# .........
 train_img_p = 'rsna-pneumonia-detection-challenge/stage_2_train_images/'
 test_imgp = 'rsna-pneumonia-detection-challenge/stage_2_test_images/'
 train_csv = 'rsna-pneumonia-detection-challenge/stage_2_train_labels.csv'
@@ -46,6 +47,7 @@ with open(train_csv, 'r', newline='') as f:
             image_arr = dcm_data.pixel_array
             resized_arr = resize(image_arr, (IMG_DIM,IMG_DIM))
 
+            # to get sample images. 
             # if ct == 1:
             #     plt.imsave("nopneumonia.png", resized_arr)
             # if ct == 4:
@@ -54,22 +56,6 @@ with open(train_csv, 'r', newline='') as f:
             all_images.append(resized_arr.flatten())
             all_files.append(fn)
             all_labels.append(label)
-            # print(label)
-        # else:
-        #     image_arr = dcm_data.pixel_array
-        #     resized_arr = resize(image_arr, (IMG_DIM,IMG_DIM))
-
-        #     """
-        #     plt.imshow(resized_arr)
-        #     plt.show()
-        #     plt.clf()
-
-        #     """
-
-        #     test_images.append(resized_arr.flatten())
-        #     test_files.append(fn)
-        #     test_labels.append(label)
-            # print(label)
         ct += 1
 
 all_files = np.array(all_files)
@@ -84,15 +70,13 @@ all_labels, all_images = zip(*c)
 all_labels = np.array(list(all_labels))
 all_images = np.array(list(all_images))
 
+
+# splitting into train and test. 
 train_labels = all_labels[:TRAIN_SIZE]
 train_images = all_images[:TRAIN_SIZE]
 
-
-
-# test_files = np.array(test_files)
 test_labels = all_labels[TRAIN_SIZE:]
 test_images = all_images[TRAIN_SIZE:]
-print(len(test_images))
 
 train_images = np.transpose(\
 		np.reshape(train_images,(-1,1,IMG_DIM,IMG_DIM)),[0,2,3,1])
@@ -101,7 +85,6 @@ test_images = np.transpose(\
         np.reshape(test_images,(-1,1,IMG_DIM,IMG_DIM)),[0,2,3,1])
 
 print("Test and train transposed")
-# Has 1 ouptut channel
 
 
 
@@ -146,32 +129,11 @@ model.add(MaxPooling2D(pool_size=(2, 2)))
 model.add(Dropout(0.3))
 
 
-
-# model.add(Conv2D(20, 3, padding='same'))
-# model.add(BatchNormalization())
-# model.add(LeakyReLU())
-# model.add(MaxPooling2D(pool_size=(2, 2)))
-# model.add(Dropout(0.3))
-
-# model.add(Conv2D(20, 3, padding='same'))
-# model.add(BatchNormalization())
-# model.add(LeakyReLU())
-# model.add(MaxPooling2D(pool_size=(2, 2)))
-# model.add(Dropout(0.3))
-
 model.add(Flatten())
-# model.add(Conv2D(1, 1, padding='same', activation='sigmoid'))
-# model.add(Dropout(0.3))
-# model.add(Flatten())
-# model.add(Dense(512, activation='relu'))
-# model.add(Dropout(0.3))
 model.add(Dense(1, activation='sigmoid'))
-# print(model.summary())
 
 model.compile(optimizer=keras.optimizers.Adam(learning_rate=0.0001), loss="binary_crossentropy",metrics=['accuracy'])
-# print("model created.")
 
-# H = History()
 H = model.fit_generator(
     f,
     steps_per_epoch=(TRAIN_SIZE // BATCH_SIZE)+1,
@@ -179,15 +141,9 @@ H = model.fit_generator(
     validation_data=t,
     validation_steps=(TEST_SIZE // BATCH_SIZE)+1)
 
-
-print(H.history)
 print("model fitted.")
+print(H.history)
 
-# P = model.predict_generator(t)
-# print(P)
-
-# output = model.evaluate_generator(t)
-# print(output)
 
 plt.style.use("ggplot")
 plt.figure()
@@ -197,7 +153,7 @@ plt.xlabel("Epoch #")
 
 plt.ylabel("Loss")
 plt.legend(loc="best")
-plt.savefig("cnnloss3.png")
+plt.savefig("actualcnnloss.png")
 
 plt.figure()
 plt.plot(np.arange(0, EPOCHS), H.history['accuracy'], label="train accuracy")
@@ -206,4 +162,4 @@ plt.xlabel("Epoch #")
 
 plt.ylabel("Accuracy")
 plt.legend(loc="best")
-plt.savefig("cnnaccuracy3.png")
+plt.savefig("actualcnnaccuracy.png")

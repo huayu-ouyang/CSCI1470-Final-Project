@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import csv
 import random
 
+# CNN with mean subtraction/normalization
 NUM_IMAGES = 10000
 TEST_SIZE = 0.3
 
@@ -22,7 +23,6 @@ IMG_DIM = 256
 TRAIN_SIZE = math.floor(NUM_IMAGES * (1 - TEST_SIZE))
 TEST_SIZE = math.ceil(NUM_IMAGES * TEST_SIZE)
 
-# .........
 train_img_p = 'rsna-pneumonia-detection-challenge/stage_2_train_images/'
 test_imgp = 'rsna-pneumonia-detection-challenge/stage_2_test_images/'
 train_csv = 'rsna-pneumonia-detection-challenge/stage_2_train_labels.csv'
@@ -46,30 +46,10 @@ with open(train_csv, 'r', newline='') as f:
             image_arr = dcm_data.pixel_array
             resized_arr = resize(image_arr, (IMG_DIM,IMG_DIM))
 
-            # if ct == 1:
-            #     plt.imsave("nopneumonia.png", resized_arr)
-            # if ct == 4:
-            #     plt.imsave("pneumonia.png", resized_arr)
-
             all_images.append(resized_arr.flatten())
             all_files.append(fn)
             all_labels.append(label)
-            # print(label)
-        # else:
-        #     image_arr = dcm_data.pixel_array
-        #     resized_arr = resize(image_arr, (IMG_DIM,IMG_DIM))
 
-        #     """
-        #     plt.imshow(resized_arr)
-        #     plt.show()
-        #     plt.clf()
-
-        #     """
-
-        #     test_images.append(resized_arr.flatten())
-        #     test_files.append(fn)
-        #     test_labels.append(label)
-            # print(label)
         ct += 1
 
 all_files = np.array(all_files)
@@ -84,15 +64,13 @@ all_labels, all_images = zip(*c)
 all_labels = np.array(list(all_labels))
 all_images = np.array(list(all_images))
 
+#split into train / test
 train_labels = all_labels[:TRAIN_SIZE]
 train_images = all_images[:TRAIN_SIZE]
 
-
-
-# test_files = np.array(test_files)
 test_labels = all_labels[TRAIN_SIZE:]
 test_images = all_images[TRAIN_SIZE:]
-print(len(test_images))
+
 
 train_images = np.transpose(\
         np.reshape(train_images,(-1,1,IMG_DIM,IMG_DIM)),[0,2,3,1])
@@ -105,6 +83,7 @@ print("Test and train transposed")
 
 
 # Generators for images
+#mean subtraction/normalization
 train_image_generator = tf.keras.preprocessing.image.ImageDataGenerator(
     rescale=1.0/255,
     rotation_range=60,
@@ -151,38 +130,13 @@ model.add(LeakyReLU())
 model.add(MaxPooling2D(pool_size=(2, 2)))
 model.add(Dropout(0.3))
 
-# model.add(Conv2D(8, 3, padding='same'))
-# model.add(BatchNormalization())
-# model.add(LeakyReLU())
-# model.add(MaxPooling2D(pool_size=(2, 2)))
-# model.add(Dropout(0.3))
-
-
-# model.add(Conv2D(20, 3, padding='same'))
-# model.add(BatchNormalization())
-# model.add(LeakyReLU())
-# model.add(MaxPooling2D(pool_size=(2, 2)))
-# model.add(Dropout(0.3))
-
-# model.add(Conv2D(20, 3, padding='same'))
-# model.add(BatchNormalization())
-# model.add(LeakyReLU())
-# model.add(MaxPooling2D(pool_size=(2, 2)))
-# model.add(Dropout(0.3))
-
 model.add(Flatten())
-# model.add(Conv2D(1, 1, padding='same', activation='sigmoid'))
-# model.add(Dropout(0.3))
-# model.add(Flatten())
-# model.add(Dense(512, activation='relu'))
-# model.add(Dropout(0.3))
 model.add(Dense(1, activation='sigmoid'))
 print(model.summary())
 
 model.compile(optimizer=keras.optimizers.Adam(learning_rate=0.0001), loss="binary_crossentropy",metrics=['accuracy'])
 print("model created.")
 
-# H = History()
 H = model.fit_generator(
     f,
     steps_per_epoch=(TRAIN_SIZE // BATCH_SIZE)+1,
@@ -191,14 +145,8 @@ H = model.fit_generator(
     validation_steps=(TEST_SIZE // BATCH_SIZE)+1)
 
 
-print(H.history)
 print("model fitted.")
-
-# P = model.predict_generator(t)
-# print(P)
-
-# output = model.evaluate_generator(t)
-# print(output)
+print(H.history)
 
 plt.style.use("ggplot")
 plt.figure()

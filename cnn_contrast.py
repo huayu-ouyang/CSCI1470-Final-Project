@@ -14,6 +14,7 @@ import csv
 import random
 
 
+#different preprocessing image functions
 def contrast_stretching(img):
     (a, b, c) = img.shape
 
@@ -31,10 +32,8 @@ def HE(img):
 
 def CLAHE(img):
     (a, b, c) = img.shape
-
     img = np.reshape(img, [a, b])
     img_adapteq = exposure.equalize_adapthist(img, clip_limit=0.03)
-
     return np.reshape(img_adapteq, [a, b, c])
 
 NUM_IMAGES = 10000
@@ -47,7 +46,7 @@ IMG_DIM = 256
 TRAIN_SIZE = math.floor(NUM_IMAGES * (1 - TEST_SIZE))
 TEST_SIZE = math.ceil(NUM_IMAGES * TEST_SIZE)
 
-# .........
+
 train_img_p = 'rsna-pneumonia-detection-challenge/stage_2_train_images/'
 test_imgp = 'rsna-pneumonia-detection-challenge/stage_2_test_images/'
 train_csv = 'rsna-pneumonia-detection-challenge/stage_2_train_labels.csv'
@@ -71,30 +70,9 @@ with open(train_csv, 'r', newline='') as f:
             image_arr = dcm_data.pixel_array
             resized_arr = resize(image_arr, (IMG_DIM,IMG_DIM))
 
-            # if ct == 1:
-            #     plt.imsave("nopneumonia.png", resized_arr)
-            # if ct == 4:
-            #     plt.imsave("pneumonia.png", resized_arr)
-
             all_images.append(resized_arr.flatten())
             all_files.append(fn)
             all_labels.append(label)
-            # print(label)
-        # else:
-        #     image_arr = dcm_data.pixel_array
-        #     resized_arr = resize(image_arr, (IMG_DIM,IMG_DIM))
-
-        #     """
-        #     plt.imshow(resized_arr)
-        #     plt.show()
-        #     plt.clf()
-
-        #     """
-
-        #     test_images.append(resized_arr.flatten())
-        #     test_files.append(fn)
-        #     test_labels.append(label)
-            # print(label)
         ct += 1
 
 all_files = np.array(all_files)
@@ -112,12 +90,8 @@ all_images = np.array(list(all_images))
 train_labels = all_labels[:TRAIN_SIZE]
 train_images = all_images[:TRAIN_SIZE]
 
-
-
-# test_files = np.array(test_files)
 test_labels = all_labels[TRAIN_SIZE:]
 test_images = all_images[TRAIN_SIZE:]
-print(len(test_images))
 
 train_images = np.divide(np.transpose(\
         np.reshape(train_images,(-1,1,IMG_DIM,IMG_DIM)),[0,2,3,1]), 255.0)
@@ -127,15 +101,14 @@ test_images = np.divide(np.transpose(\
 
 print("Test and train transposed")
 
-print(train_images.shape)
-print(test_images.shape)
+
 # Generators for images
 train_image_generator = tf.keras.preprocessing.image.ImageDataGenerator(
     rotation_range=60,
     horizontal_flip=True,
     featurewise_center=True,
     featurewise_std_normalization=True,
-    preprocessing_function=HE) # change btwn contrast_stretching, HE, CLAHE
+    preprocessing_function=CLAHE) # change btwn contrast_stretching, HE, CLAHE
 
 test_image_generator = tf.keras.preprocessing.image.ImageDataGenerator()
 
@@ -177,32 +150,13 @@ model.add(LeakyReLU())
 model.add(MaxPooling2D(pool_size=(2, 2)))
 model.add(Dropout(0.3))
 
-
-# model.add(Conv2D(20, 3, padding='same'))
-# model.add(BatchNormalization())
-# model.add(LeakyReLU())
-# model.add(MaxPooling2D(pool_size=(2, 2)))
-# model.add(Dropout(0.3))
-
-# model.add(Conv2D(20, 3, padding='same'))
-# model.add(BatchNormalization())
-# model.add(LeakyReLU())
-# model.add(MaxPooling2D(pool_size=(2, 2)))
-# model.add(Dropout(0.3))
-
 model.add(Flatten())
-# model.add(Conv2D(1, 1, padding='same', activation='sigmoid'))
-# model.add(Dropout(0.3))
-# model.add(Flatten())
-# model.add(Dense(512, activation='relu'))
-# model.add(Dropout(0.3))
 model.add(Dense(1, activation='sigmoid'))
 print(model.summary())
 
 model.compile(optimizer=keras.optimizers.Adam(learning_rate=0.0001), loss="binary_crossentropy",metrics=['accuracy'])
 print("model created.")
 
-# H = History()
 H = model.fit_generator(
     f,
     steps_per_epoch=(TRAIN_SIZE // BATCH_SIZE)+1,
@@ -214,11 +168,6 @@ H = model.fit_generator(
 print(H.history)
 print("model fitted.")
 
-# P = model.predict_generator(t)
-# print(P)
-
-# output = model.evaluate_generator(t)
-# print(output)
 
 plt.style.use("ggplot")
 plt.figure()
